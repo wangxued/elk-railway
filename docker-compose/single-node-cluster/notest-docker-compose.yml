@@ -1,0 +1,70 @@
+version: '3.8'
+
+x-elastic-common: &elastic-common
+  image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:9.0.4}
+  environment:
+    - node.name=es01
+    - cluster.name=${CLUSTER_NAME:-es-docker-cluster}
+    - discovery.type=single-node
+    - bootstrap.memory_lock=true
+    - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+    - xpack.security.enabled=true
+    - xpack.security.enrollment.enabled=true
+    - xpack.security.http.ssl.enabled=true
+    - xpack.security.http.ssl.key=certs/es01/es01.key
+    - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+    - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+  ulimits:
+    memlock:
+      soft: -1
+      hard: -1
+  volumes:
+    - esdata01:/usr/share/elasticsearch/data
+    - single-certs:/usr/share/elasticsearch/config/certs:ro
+  networks:
+    - elastic
+  ports:
+    - "9200:9200"
+
+services:
+  es01:
+    <<: *elastic-common
+    container_name: es01
+
+  kibana:
+    depends_on:
+      es01:
+        condition: service_healthy
+    image: ${KIBANA_IMAGE:-docker.elastic.co/kibana/kibana:9.0.4}
+    container_name: kib01
+    environment:
+      - ELASTICSEARCH_HOSTS=https://es01:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+      - SERVER_PUBLICBASEURL=${KIBANA_PUBLIC_URL:-http://localhost:5601}
+      # - SERVER_HOST=0.0.0.0
+      - SERVER_NAME=kibana_system
+      - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY:-something_at_least_32_characters}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY:-something_at_least_32_characters}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY:-something_at_least_32_characters}
+      - XPACK_SECURITY_SESSION_IDLETIMEOUT=1h
+      - XPACK_SECURITY_SESSION_LIFESPAN=30d
+    ports:
+      - "5601:5601"
+    volumes:
+      - single-certs:/usr/share/kibana/config/certs
+      - kibanadata:/usr/share/kibana/data
+    networks:
+      - elastic
+# 可选：跳过签名验证
+# command: ["/bin/sh", "-c", "cosign verify ... && kibana"]
+
+volumes:
+  esdata01:
+    driver: local
+  single-certs:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge

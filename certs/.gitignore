@@ -1,0 +1,15 @@
+*.crt
+*.key
+*.srl
+*.pem
+*.p12
+*.jks
+*.pfx
+*.jceks
+*.cer
+*.csr
+*.der
+*.p7b
+*.p7c
+*.p7s
+*.p8
