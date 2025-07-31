@@ -1,0 +1,57 @@
+filebeat.inputs:
+- type: filestream
+  enabled: true
+  id: some-old-files
+  take_over:
+    enabled: true
+  paths:
+    - /data/logs/*.log  # Example path, adjust as needed
+  ignore_inactive: since_last_start
+  
+- type: filestream
+  enabled: true
+  id: example-java-collector
+  take_over:
+    enabled: true
+  paths:
+    - /var/log/java-exceptions*.log # Example path, adjust as needed
+  parsers:
+    - multiline:
+        pattern: '^\['
+        negate: true
+        match: after
+  close.on_state_change.removed: true
+  close.on_state_change.renamed: true
+
+- type: filestream
+  enabled: true
+  id: container-logs-input
+  prospector.scanner.symlinks: true
+  parsers:
+    - container: ~
+  take_over:
+    enabled: true
+  paths:
+    - /var/lib/docker/containers/*.log
+
+- type: filestream
+  enabled: true
+  id: application-json-input
+  take_over:
+    enabled: true
+  paths:
+    - /var/log/some-application*.json # Example path, adjust as needed
+  prospector.scanner.check_interval: 1m
+  parsers:
+    - ndjson:
+        keys_under_root: true
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  ssl:
+    enabled: true
+    certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
+    certificate: "/usr/share/filebeat/certs/filebeat.crt"
+    key: "/usr/share/filebeat/certs/filebeat.key"
+    verification_mode: "full"
+    supported_protocols: ["TLSv1.2"]

@@ -1,0 +1,12 @@
+
+ARG ELASTICSEARCH_VERSION=9.1.0
+ARG ELASTIC_PASSWORD
+ARG KIBANA_PASSWORD
+FROM docker.elastic.co/elasticsearch/elasticsearch-wolfi:${ELASTICSEARCH_VERSION}
+
+# Add entrypoint script for cert permissions and kibana_system password
+COPY entrypoint-init.sh /usr/local/bin/entrypoint-init.sh
+RUN chmod +x /usr/local/bin/entrypoint-init.sh
+
+USER elasticsearch
+ENTRYPOINT ["/usr/local/bin/entrypoint-init.sh"]

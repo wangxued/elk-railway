@@ -1,0 +1,189 @@
+
+services:
+
+  # setup:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - multi-node-certs:/usr/share/elasticsearch/config/certs
+  #   user: "0"
+  #   command: >
+  #     bash -c '
+  #       if [ x${ELASTIC_PASSWORD} == x ]; then
+  #         echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       elif [ x${KIBANA_PASSWORD} == x ]; then
+  #         echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       fi;
+  #       if [ ! -f config/certs/ca.zip ]; then
+  #         echo "Creating CA";
+  #         bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+  #         unzip config/certs/ca.zip -d config/certs;
+  #       fi;
+  #       if [ ! -f config/certs/certs.zip ]; then
+  #         echo "Creating certs";
+  #         echo -ne \
+  #         "instances:\n"\
+  #         "  - name: elasticsearch\n"\
+  #         "    dns:\n"\
+  #         "      - elasticsearch\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: kibana\n"\
+  #         "    dns:\n"\
+  #         "      - kibana\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: logstash\n"\
+  #         "    dns:\n"\
+  #         "      - logstash\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: filebeat\n"\
+  #         "    dns:\n"\
+  #         "      - filebeat\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         > config/certs/instances.yml;
+  #         bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+  #         unzip config/certs/certs.zip -d config/certs;
+  #       fi;
+  #       echo "Setting file permissions"
+  #       chown -R root:root config/certs;
+  #       find . -type d -exec chmod 750 \{\} \;;
+  #       find . -type f -exec chmod 640 \{\} \;;
+  #       echo "Waiting for Elasticsearch availability";
+  #       until curl -s --cacert config/certs/ca/ca.crt https://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+  #       echo "Setting kibana_system password";
+  #       until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" https://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+  #       echo "All done!";
+  #     '
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
+  #     interval: 1s
+  #     timeout: 5s
+  #     retries: 120
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.1.0
+    # depends_on:
+    #   setup:
+    #     condition: service_healthy
+    environment:
+      - node.name=elasticsearch
+      - http.host=0.0.0.0
+      - transport.host=0.0.0.0
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=changeme
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/elasticsearch.key
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/elasticsearch.crt
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/elasticsearch.key
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/elasticsearch.crt
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/ca.crt
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./certs:/usr/share/elasticsearch/config/certs
+      - esdata:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert /usr/share/elasticsearch/config/certs/ca.crt https://elasticsearch:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    networks:
+      - testing
+
+  kibana:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana-wolfi:9.1.0
+    volumes:
+      - ./certs:/usr/share/kibana/config/certs
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - 5601:5601
+    networks:
+      - testing
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=changeme
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca.crt
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=c69548d9027afcf4d55146b1d425a9f4c69548d9027afcf4d55146b1d425a9f4
+      # - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="min-32-byte-long-NEW-encryption-key"
+      # - XPACK_ENCRYPTEDSAVEDOBJECTS_KEYROTATION_DECRYPTIONONLYKEYS[0]="min-32-byte-long-OLD#1-encryption-key"
+      # - XPACK_ENCRYPTEDSAVEDOBJECTS_KEYROTATION_DECRYPTIONONLYKEYS[1]="min-32-byte-long-OLD#2-encryption-key"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  logstash:
+    # We build the observability SRE image with the gradle task, but then tag it
+    # as this in CI to ensure we are getting the local one built from the PR and not from 
+    # the container registry
+    image: docker.elastic.co/logstash/logstash-wolfi:9.1.0
+    environment:
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./certs:/usr/share/logstash/config/certs
+    ports:
+      - 5044:5044
+      - 50000:50000/tcp
+      - 50000:50000/udp
+      - 9600:9600
+    depends_on:
+      - elasticsearch
+    networks:
+      - testing
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat-wolfi:9.1.0
+    # Test runner mounts volume with non root user, do not require this file be root
+    entrypoint: "filebeat -e --strict.perms=false"
+    # user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./certs:/usr/share/filebeat/certs
+      - ./test-logs:/data/logs:ro
+    depends_on:
+      - logstash
+    networks:
+      - testing
+
+networks:
+  testing:
+    driver: bridge
+
+volumes:
+  esdata:
+    driver: local
+  kibanadata:
+    driver: local

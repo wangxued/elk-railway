@@ -13,7 +13,8 @@
 
 # 在 Railway 上部署和托管 ELK Stack
 
-ELK Stack 是一个基于 ELK Stack 的日志分析和可视化平台模板，适用于需要在 Railway 平台上快速搭建日志采集、存储与分析环境的开发者和团队。该模板集成了 Elasticsearch、Logstash 和 Kibana，支持灵活扩展和自定义配置。
+ELK Stack 是一个基于 ELK Stack 的日志分析和可视化平台模板，适用于需要在 Railway 平台上快速搭建日志采集、存储与分析环境的开发者和团队。
+该模板集成了 Elasticsearch、Logstash、filebeat 和 Kibana，支持灵活扩展和自定义配置。
 
 ## 关于在 Railway 上托管 ELK Stack
 
