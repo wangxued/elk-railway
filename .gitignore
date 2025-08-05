@@ -5,3 +5,19 @@
 
 #
 error.log
+*.srl
+*.pem
+*.p12
+*.jks
+*.pfx
+*.jceks
+*.cer
+*.csr
+*.der
+*.p7b
+*.p7c
+*.p7s
+*.p8
+*.key
+*.crt
+

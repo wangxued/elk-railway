@@ -5,6 +5,6 @@ FROM docker.elastic.co/logstash/logstash-wolfi:${LOGSTASH_VERSION}
 # Copy pipeline and config
 COPY ./pipeline /usr/share/logstash/pipeline
 COPY ./config/logstash.yml /usr/share/logstash/config/logstash.yml
-COPY ./certs /usr/share/logstash/certs
+# COPY ./certs /usr/share/logstash/certs
 
 

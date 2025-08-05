@@ -49,9 +49,9 @@ filebeat.inputs:
 output.logstash:
   hosts: ["${LOGSTASH_HOSTS}"]
   ssl:
-    enabled: true
-    certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
-    certificate: "/usr/share/filebeat/certs/filebeat.crt"
-    key: "/usr/share/filebeat/certs/filebeat.key"
-    verification_mode: "full"
-    supported_protocols: ["TLSv1.2"]
+    enabled: false
+    # certificate_authorities: ["/usr/share/filebeat/certs/ca.crt"]
+    # certificate: "/usr/share/filebeat/certs/filebeat.crt"
+    # key: "/usr/share/filebeat/certs/filebeat.key"
+    # verification_mode: "full"
+    # supported_protocols: ["TLSv1.2"]
