@@ -12,4 +12,5 @@
 *.p7s
 *.p8
 ca.key
+.gitignore
 

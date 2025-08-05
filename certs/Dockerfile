@@ -7,4 +7,4 @@ WORKDIR /certs
 COPY generate.sh ./generate.sh
 RUN chmod +x ./generate.sh
 
-ENTRYPOINT ["./generate.sh"]
+ENTRYPOINT ["/certs/generate.sh"]
