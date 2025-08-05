@@ -4,6 +4,6 @@ FROM docker.elastic.co/beats/filebeat-wolfi:${FILEBEAT_VERSION}
 
 # Copy config and certs
 COPY ./filebeat/filebeat.yml /usr/share/filebeat/filebeat.yml
-COPY ./test-logs /data/logs
+COPY ./test-logs/test.log /data/logs/test.log
 
 ENTRYPOINT ["filebeat", "-e", "--strict.perms=false"]
